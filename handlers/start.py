@@ -5,9 +5,10 @@ from aiogram.fsm.context import FSMContext
 
 from datetime import datetime, date
 
-from keyboards import get_appoinments_menu, get_services_menu
+from keyboards import get_appoinments_menu, get_services_menu, get_available_times, get_times_menu
 from config import SERVICES
 from states import Booking
+from database import get_taken_times
 
 router = Router()
 
@@ -64,8 +65,29 @@ async def handle_date(message: Message, state: FSMContext):
         await message.answer("Эта дата уже прошла. Введите другую")
         return
 
+    taken_times = await get_taken_times(chosen_date.isoformat())
+    available_times = get_available_times(taken_times)
+    print(available_times)
     await state.update_data(date=chosen_date.isoformat())
     await state.set_state(Booking.waiting_time)
     await message.answer(
-        f"Дата выбрана: {chosen_date.strftime('%d.%m.%Y')}"
+        f"Дата выбрана: {chosen_date.strftime('%d.%m.%Y')}\n"
+        "Пожалуйта, выберите время:",
+        reply_markup = get_times_menu(available_times)
+    )
+
+@router.callback_query(Booking.waiting_time, F.data.startswith("time_"))
+async def handle_time_choice(callback: CallbackQuery, state: FSMContext):
+    time = callback.data.removeprefix("time_")
+    data = await state.get_data()
+    available_times = get_available_times(await get_taken_times(data["date"]))
+
+    if time not in available_times:
+        await callback.answer("Выбранное время занято или не доступно")
+        return
+
+    await callback.answer()
+    await state.update_data(time=time)
+    await callback.message.edit_text(
+        f"Вы выбрали: {time}"
     )

@@ -20,3 +20,23 @@ def get_services_menu():
     builder.adjust(1)
 
     return builder.as_markup()
+
+def get_available_times(taken_times):
+    times = ["10:00", "11:00", "12:00", "15:00", "17:00", "19:00"]
+    available_times = []
+
+    for time in times:
+        if time not in taken_times:
+            available_times.append(time)
+
+    return(available_times)
+
+def get_times_menu(available_times):
+    builder = InlineKeyboardBuilder()
+
+    for time in available_times:
+        builder.button(text=time, callback_data=f"time_{time}")
+
+    builder.adjust(2)
+
+    return builder.as_markup()
